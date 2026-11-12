@@ -11,7 +11,7 @@
 **A Raycast-esque launcher for [Omarchy](https://omarchy.org).**
 It learns what you use, searches your apps and every Omarchy action, and looks like it shipped with your theme.
 
-<img src="docs/screenshots/hero.png" alt="noblerunner showing suggestions for apps and Omarchy commands" width="760">
+<img src="docs/screenshots/superwhisper.png" alt="Superwhisper's glow along the bottom edge of the search bar" width="860">
 
 </div>
 
@@ -47,9 +47,9 @@ Omarchy's built-in menu is great at what it does. noblerunner adds what Raycast 
 <p align="center"><b>No match? Send the query to your default web search</b></p>
 
 <p align="center">
-  <img src="docs/screenshots/superwhisper.png" alt="Superwhisper's glow along the bottom edge of the search bar" width="70%">
+  <img src="docs/screenshots/hero.png" alt="noblerunner showing the empty catalog" width="49%">
 </p>
-<p align="center"><b>Superwhisper dictates into the bar. Its glow sits on the bottom edge.</b></p>
+<p align="center"><b>Opens on your apps and Omarchy actions</b></p>
 
 ### Follows your Omarchy theme
 
