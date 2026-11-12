@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "nobledoodle.noblerunner",
+  "name": "noblerunner",
+  "version": "1.0.0",
+  "author": "NobleDoodle",
+  "description": "A Raycast-style launcher for Omarchy: apps, every Omarchy action, calculator and frecency ranking. A fork of omacast by typecraft.",
+  "kinds": [
+    "menu"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "menu": "Launcher.qml"
+  }
+}

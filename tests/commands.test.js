@@ -1,0 +1,15 @@
+const test = require("node:test")
+const assert = require("node:assert/strict")
+const { isSettingsQuery } = require("../core/Commands.js")
+
+test("/s and /settings open settings, and the letters in between do too", () => {
+  assert.equal(isSettingsQuery("/s"), true)
+  assert.equal(isSettingsQuery("  /S "), true)
+  assert.equal(isSettingsQuery("/se"), true)
+  assert.equal(isSettingsQuery("/settings"), true)
+  assert.equal(isSettingsQuery("/"), false)
+  assert.equal(isSettingsQuery("/sx"), false)
+  assert.equal(isSettingsQuery("/settings "), true)
+  assert.equal(isSettingsQuery("/settings extra"), false)
+  assert.equal(isSettingsQuery("settings"), false)
+})
