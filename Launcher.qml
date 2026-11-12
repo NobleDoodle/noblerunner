@@ -15,15 +15,12 @@ Item {
   readonly property string pluginId: (root.manifest && root.manifest.id) || "nobledoodle.noblerunner"
 
   property bool opened: false
-  property double openedAt: 0
-
 
   function open(payloadJson) {
     var payload = ({})
     try { payload = JSON.parse(payloadJson || "{}") } catch (e) { payload = ({}) }
     var wasOpen = root.opened
     root.opened = true
-    root.openedAt = Date.now()
     launcher.prepare(payload)
     if (!wasOpen) backend.emit("window.visibilityChanged", { visible: true })
   }

@@ -39,7 +39,7 @@ PanelWindow {
 
   // The layer is not a window, so Superwhisper's edge glow would sit on
   // whatever was focused behind it. A borderless toplevel (title
-  // noblerunner-glow, floated by looknfeel.lua) is focused first and then
+  // noblerunner-glow, floated by the glowRule below) is focused first and then
   // kept on the card. The real glow follows that window. The Hyprland
   // binds still start and stop dictation; calling record from here would
   // toggle it off again.
@@ -139,7 +139,24 @@ PanelWindow {
     window.anchorPlacedKey = ""
     window.placeAnchor()
   }
+  // The toplevel is only worth its focus change when Superwhisper is there
+  // to draw on it. The rule keeps Hyprland from decorating it: a border or
+  // blur box would show around the card's bottom edge. Runtime rules are
+  // dropped by a config reload, so it is sent again after one.
+  property bool glowAvailable: false
+  readonly property bool glowWanted: window.glowAvailable && window.backend.config.superwhisperGlow
+  onGlowWantedChanged: if (window.glowWanted) glowRule.running = true
+  Process {
+    id: glowProbe
+    command: ["sh", "-c", "command -v superwhisper >/dev/null 2>&1"]
+    onExited: function(exitCode) { window.glowAvailable = exitCode === 0 }
+  }
+  Process {
+    id: glowRule
+    command: ["hyprctl", "eval", 'hl.window_rule({ match = { title = "^noblerunner-glow$" }, float = true, decorate = false, no_shadow = true, no_anim = true, no_blur = true, border_size = 0, rounding = 0 })']
+  }
   function raiseAnchor() {
+    if (!window.glowWanted) { window.layerUp = true; return }
     var current = Hyprland.activeToplevel
     if (current && window.anchorAddressOk(current.address) && current.title !== "noblerunner-glow")
       window.restoreAddress = current.address
@@ -256,10 +273,15 @@ PanelWindow {
   Connections {
     target: Hyprland
     function onRawEvent(event) {
-      if (event && String(event.name) === "configreloaded") window.refreshWindowBorder()
+      if (!event || String(event.name) !== "configreloaded") return
+      window.refreshWindowBorder()
+      if (window.glowWanted) glowRule.running = true
     }
   }
-  Component.onCompleted: window.refreshWindowBorder()
+  Component.onCompleted: {
+    window.refreshWindowBorder()
+    glowProbe.running = true
+  }
 
   property var stack: [{ kind: "root", title: "noblerunner", query: "" }]
   readonly property var view: window.stack[window.stack.length - 1]
@@ -386,7 +408,6 @@ PanelWindow {
   }
 
   function prepare(payload) {
-    popTimer.stop()
     if (typeof payload.query === "string") window.query = payload.query
     window.closePopups()
     window.historyIndex = -1
@@ -401,9 +422,9 @@ PanelWindow {
     window.closing = false
     if (done) return
     if (window.layerUp) window.dropAnchor()
-    var seconds = Number(window.general.popToRootTimeout)
-    if (!(seconds > 0)) window.popToRoot()
-    else { popTimer.interval = seconds * 1000; popTimer.restart() }
+    // Every open starts at the root (onShownChanged), so nothing is kept
+    // while hidden: the query and its rows go now.
+    window.popToRoot()
   }
 
   function beginClose() {
@@ -504,11 +525,6 @@ PanelWindow {
         else if (text.indexOf("moved") !== -1) window.anchorTries++
       }
     }
-  }
-
-  Timer {
-    id: popTimer
-    onTriggered: window.popToRoot()
   }
 
   FloatingWindow {
@@ -1063,11 +1079,14 @@ PanelWindow {
     anchors.horizontalCenter: parent.horizontalCenter
     // restY is vertical center. slide moves the card from just below the
     // screen up to restY. Once it has arrived, restY still follows height,
-    // so expanding the list keeps the card centered. Not rounded: rounding
-    // the center made the rise move in visible steps.
+    // so expanding the list keeps the card centered. Not rounded while it
+    // moves: rounding the center made the rise move in visible steps. At
+    // rest it sits on a whole pixel, or an odd height difference would leave
+    // the top and bottom border half a pixel soft.
     readonly property real restY: {
       var centered = (window.height - height) / 2
-      return Math.max(Style.gapsOut, Math.min(centered, window.height - height - Style.gapsOut))
+      var y = Math.max(Style.gapsOut, Math.min(centered, window.height - height - Style.gapsOut))
+      return window.cardMoving ? y : Math.round(y)
     }
     y: restY + (window.height - restY) * (1 - window.slide)
     color: window.look.background

@@ -622,7 +622,6 @@ Item {
     onMessage: function(level, text, metadata) { backend.log(level, "calculator", text, metadata) }
   }
 
-  readonly property int dataRevision: candidatesRevision + (settingsStore.loaded ? 1 : 0) + (frecencyStore.loaded ? 1 : 0)
   property int storeRevision: 0
   Connections { target: settingsStore; function onChanged() { backend.storeRevision++ } }
   Connections { target: frecencyStore; function onChanged() { backend.storeRevision++ } }

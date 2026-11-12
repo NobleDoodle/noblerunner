@@ -73,7 +73,7 @@ Rules for `core/*.js`: one self-contained file per module (QML `import "x.js"` a
 
 ```sh
 node --test tests/*.test.js   # unit tests (node's built-in runner; no npm install)
-mise x act@latest -- act push   # run .github/workflows/ci.yml locally in Docker (.actrc maps the WarpBuild label)
+mise x act@latest -- act push   # run .github/workflows/ci.yml locally in Docker
 tests/smoke.sh               # live checks: doctor, IPC, toggle latency (<100 ms). Shows/hides the launcher, never types.
 omarchy plugin validate .
 
@@ -86,7 +86,8 @@ noblerunner toggle | show | hide
 noblerunner run <commandId>             # Phase 1+
 noblerunner call <method> [json]        # any backend method, e.g. noblerunner call system.info
 noblerunner doctor
-noblerunner setup hyprland [--yes]      # asks, then writes ~/.config/hypr/noblerunner.lua (Alt+Space) and requires it from hyprland.lua
+noblerunner setup hyprland              # asks for the key (Alt+Space, Super, Super+Space, Off), writes ~/.config/hypr/noblerunner.lua and requires it from hyprland.lua
+noblerunner setup hyprland --key=super --yes   # the same without questions (alt-space | super | super-space | off)
 
 qs log -n -p "$OMARCHY_PATH/shell" -t 50    # shell log; our lines start with [noblerunner]
 ```
@@ -98,7 +99,7 @@ qs log -n -p "$OMARCHY_PATH/shell" -t 50    # shell log; our lines start with [n
 Check each of these on the machine instead of assuming it; Omarchy changes often.
 
 - **Hyprland config is Lua** (Hyprland 0.56). `~/.config/hypr/hyprland.lua` `require`s `default.hypr.omarchy` and the user's `hypr.bindings` etc. Bindings use `o.bind("ALT + SPACE", "desc", dispatcher)`. `noblerunner setup hyprland` writes only `~/.config/hypr/noblerunner.lua` and appends one `require("hypr.noblerunner")`. Never edit Omarchy's files.
-- **Hotkey.** Super+Space is the Omarchy menu and Super+Alt+Space is the dock's app grid. noblerunner defaults to **Alt+Space** through `hl.dsp.global("noblerunner:toggle")`, so the plugin's GlobalShortcut fires with no process spawn. Users can change their binding in `noblerunner.lua`; never force a Super+Space swap.
+- **Hotkey.** Super+Space is the Omarchy menu and Super+Alt+Space is the dock's app grid. `setup hyprland` offers **Alt+Space** (the default), a **Super** tap, **Super+Space** and **Off**. Alt+Space and Super+Space go through `hl.dsp.global("noblerunner:toggle")`, so the plugin's GlobalShortcut fires with no process spawn; the Super tap (`SUPER + SUPER_L`, on release) runs the CLI, because the global dispatch does nothing from inside that bind. The file unbinds the chord it takes, and setup asks before taking a key that something else holds. Never take a key the user did not pick.
 - **IPC.** `omarchy-shell <target> <fn> args…` answers over the shell's socket (needs `socat`), falling back to `qs ipc`. Our target is `noblerunner`. `IpcHandler` (Quickshell.Io; 4.0.x dropped `ShellIpc`) functions must have typed params and return a string.
 - **Theme.** Bind colours to `Commons.Color.menu.*` and sizes to `Style.*`. They follow `omarchy theme set` live; no theme parsing.
 - **App launching.** Use `shell.appLibrary.launch(id, name)`. It goes through `uwsm-app -- gtk-launch`, sends terminal apps to `omarchy-launch-tui`, and shows Omarchy's launch OSD. The shell only provides `appLibrary` to `menu`-kind plugins.
@@ -130,7 +131,8 @@ Works:
 - **Feedback:** toasts in the footer and a HUD through Omarchy's OSD when the window closes; static footer "Loading…" appears only after 500 ms of visible loading, yields to toasts and resets on hide. The header divider stays still.
 - **Window behaviour:**
   - The `escapeKeyBehavior` setting works both ways.
-  - Pop-to-root runs after `popToRootTimeout`.
+  - Every open starts at the root with an empty query; closing drops the query. `popToRootTimeout` is still in the settings document but nothing reads it.
+  - The Superwhisper glow toplevel (`noblerunner-glow`) is only raised when `superwhisper` is on PATH and `superwhisperGlow` is true in config.json; the plugin sends its own Hyprland window rule for it.
   - Compact mode shows only the header until you type.
   - A launch from root clears the query [I].
   - A row is selected on hover only after a real pointer move (Omarchy's PointerMoveGate).
@@ -155,7 +157,7 @@ Works:
 **Default-agent hand-off:** removed 2026-11-02 after the marketplace review; it exposed the question in process arguments (SPEC §2.0).
 
 Stubbed / not yet:
-- No settings window, so you can't re-enable a disabled command except with Undo on the toast (Ctrl+T) or by editing `~/.local/share/noblerunner/db/settings.json` (delete its `enabled: false`). That's Phase 2.
+- Settings are the `/settings` panel in the launcher (`ui/SettingsPanel.qml`: window, escape, navigation, sensitivity, web search, zoom, animations). It has no command list, so you can't re-enable a disabled command except with Undo on the toast (Ctrl+T) or by editing `~/.local/share/noblerunner/db/settings.json` (delete its `enabled: false`). That's Phase 2.
 - No deep links (`noblerunner://`); Phase 2 or 9.
 
 Won't do (decided 2026-10-22):

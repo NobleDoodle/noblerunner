@@ -21,9 +21,7 @@ Item {
     { key: "rootSearchSensitivity", label: "Search sensitivity", kind: "choice", choices: ["low", "medium", "high"], labels: ["Low", "Medium", "High"] },
     { key: "webSearch", label: "Web search", kind: "choice", choices: ["google", "duckduckgo", "brave", "bing", "startpage", "ecosia"], labels: ["Google", "DuckDuckGo", "Brave", "Bing", "Startpage", "Ecosia"] },
     { key: "uiZoom", label: "Zoom", kind: "zoom" },
-    { key: "animationSpeed", label: "Animations", kind: "speed", steps: [0, 0.5, 1, 1.5, 2] },
-    { key: "popToRootTimeout", label: "Return to root", kind: "seconds" },
-    { key: "showFavoritesInCompactMode", label: "Favorites in the bar", kind: "bool" }
+    { key: "animationSpeed", label: "Animations", kind: "speed", steps: [0, 0.5, 1, 1.5, 2] }
   ]
 
   function move(delta) {
@@ -38,14 +36,12 @@ Item {
       var i = row.choices.indexOf(value)
       return row.labels[i >= 0 ? i : 0]
     }
-    if (row.kind === "bool") return value ? "On" : "Off"
     if (row.kind === "zoom") return Math.round((Number(value) || 1) * 100) + "%"
     if (row.kind === "speed") {
       var speed = Number(value)
       if (!isFinite(speed) || speed <= 0) return "Off"
       return (speed === Math.round(speed) ? String(speed) : speed.toFixed(1)) + "×"
     }
-    if (row.kind === "seconds") return (Number(value) || 0) + " seconds"
     return value === undefined ? "" : String(value)
   }
 
@@ -57,8 +53,6 @@ Item {
       var i = row.choices.indexOf(current)
       if (i < 0) i = 0
       panel.apply(row.key, row.choices[(i + (dir < 0 ? -1 : 1) + row.choices.length) % row.choices.length])
-    } else if (row.kind === "bool") {
-      panel.apply(row.key, !current)
     } else if (row.kind === "zoom") {
       var z = Math.round(((Number(current) || 1) + (dir < 0 ? -0.1 : 0.1)) * 10) / 10
       panel.apply(row.key, Math.max(0.8, Math.min(1.5, z)))
@@ -72,9 +66,6 @@ Item {
       if (at < 0) at = 0
       if (at >= steps.length) at = steps.length - 1
       panel.apply(row.key, steps[at])
-    } else if (row.kind === "seconds") {
-      var n = (Number(current) || 0) + (dir < 0 ? -15 : 15)
-      panel.apply(row.key, Math.max(0, Math.min(600, n)))
     }
   }
 

@@ -87,6 +87,9 @@ var configDefaults = {
   // Daily ECB reference rates from frankfurter.dev for currency conversion
   // (SPEC §8 Calculator). The only network request noblerunner makes. [D]
   currencyRates: true,
+  // Superwhisper's glow on the card. It needs a focused toplevel behind the
+  // launcher, so it is only used when Superwhisper is installed. [D]
+  superwhisperGlow: true,
   // Calculator preferences named after Raycast's (ref 04 App. B) [O].
   remToPxRate: 16,
   workHoursPerDay: 8,
