@@ -154,6 +154,9 @@ background services.
   or times out, search falls back to the built-in matcher until the plugin reloads. Rebuild it after
   `omarchy plugin update`.
 
+- **Blur.** noblerunner asks Hyprland to blur what is behind its card. It shows when your menu background is
+  see-through (`background-alpha` below 1 under `[menu]` in `~/.config/omarchy/shell.toml`); with Omarchy's
+  default opaque menu the card looks the same as before.
 - **Superwhisper glow.** When Superwhisper is installed, the launcher opens an invisible window behind its
   card while it is open, because Superwhisper draws its glow on the focused window. noblerunner adds a
   Hyprland rule for that one window so it has no border or blur. Turn it off with `"superwhisperGlow": false`

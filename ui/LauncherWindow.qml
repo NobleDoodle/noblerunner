@@ -155,6 +155,14 @@ PanelWindow {
     id: glowRule
     command: ["hyprctl", "eval", 'hl.window_rule({ match = { title = "^noblerunner-glow$" }, float = true, decorate = false, no_shadow = true, no_anim = true, no_blur = true, border_size = 0, rounding = 0 })']
   }
+  // Hyprland blurs a layer only when a rule says so. With this one a
+  // see-through card (menu.background-alpha below 1) shows blur behind it,
+  // as the Omarchy menu does on a setup that blurs it; an opaque card looks
+  // the same either way. ignore_alpha leaves the clear surround alone.
+  Process {
+    id: blurRule
+    command: ["hyprctl", "eval", 'hl.layer_rule({ match = { namespace = "^noblerunner$" }, blur = true, ignore_alpha = 0.75 })']
+  }
   function raiseAnchor() {
     if (!window.glowWanted) { window.layerUp = true; return }
     var current = Hyprland.activeToplevel
@@ -275,11 +283,13 @@ PanelWindow {
     function onRawEvent(event) {
       if (!event || String(event.name) !== "configreloaded") return
       window.refreshWindowBorder()
+      blurRule.running = true
       if (window.glowWanted) glowRule.running = true
     }
   }
   Component.onCompleted: {
     window.refreshWindowBorder()
+    blurRule.running = true
     glowProbe.running = true
   }
 
