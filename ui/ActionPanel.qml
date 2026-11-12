@@ -55,6 +55,7 @@ Rectangle {
     clip: true
     model: panel.visibleActions
     boundsBehavior: Flickable.StopAtBounds
+    WheelScroll { view: list; lineHeight: panel.px(34) }
 
     delegate: Item {
       required property var modelData

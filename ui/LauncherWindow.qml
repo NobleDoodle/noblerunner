@@ -1347,6 +1347,7 @@ PanelWindow {
         model: rows
         reuseItems: true
         boundsBehavior: Flickable.StopAtBounds
+        WheelScroll { view: list; lineHeight: window.px(42) }
 
         delegate: ResultRow {
           Component.onCompleted: selected = index === window.selectedIndex
