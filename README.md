@@ -4,14 +4,14 @@
 
 <div align="center">
 
-![noblerunner](preview-glow.png)
+![noblerunner](preview-matte.png)
 
 # noblerunner
 
 **A Raycast-esque launcher for [Omarchy](https://omarchy.org).**
 It learns what you use, searches your apps and every Omarchy action, and looks like it shipped with your theme.
 
-<img src="docs/screenshots/superwhisper-bar.png" alt="Superwhisper's glow along the bottom edge of the search bar" width="860">
+<img src="docs/screenshots/superwhisper-matte.png" alt="Superwhisper's glow along the bottom edge of the search bar" width="760">
 
 </div>
 
