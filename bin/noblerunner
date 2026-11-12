@@ -42,7 +42,9 @@ Setup
   install                Enable the plugin and link this CLI into ~/.local/bin
                          (a development checkout is also linked into omarchy-shell)
   uninstall              Disable and remove the plugin, offering to remove the hotkey
-  setup hyprland [--yes] Bind Alt+Space to the launcher in ~/.config/hypr/noblerunner.lua
+  setup hyprland         Choose the hotkey (Alt+Space, Super, Super+Space or Off);
+                         it goes in ~/.config/hypr/noblerunner.lua
+      [--key=alt-space|super|super-space|off] [--yes]   the same without questions
   build-search           Build the optional flea-search helper (needs Rust/cargo)
   doctor                 Check that the pieces are in place
 
@@ -213,65 +215,269 @@ cmd_dev() {
     done
 }
 
+# --- Hotkey setup -----------------------------------------------------------
+# Four choices. Each one owns its chord: the file unbinds whatever held it and
+# then binds the launcher, and it loads last, after the user's own bindings.
+HOTKEY_KEYS=(alt-space super super-space off)
+HOTKEY_MARK='-- Written by `noblerunner setup hyprland`'
+
+hotkey_label() {
+  case $1 in
+    alt-space) echo "Alt+Space" ;;
+    super) echo "Super" ;;
+    super-space) echo "Super+Space" ;;
+    off) echo "Off" ;;
+  esac
+}
+
+hotkey_note() {
+  case $1 in
+    alt-space) echo "the usual launcher key" ;;
+    super) echo "tap the Super key by itself; holding it for another shortcut does nothing" ;;
+    super-space) echo "takes the Omarchy menu's key; the menu stays in noblerunner as \"Omarchy Menu\"" ;;
+    off) echo "no hotkey; open it with: noblerunner toggle" ;;
+  esac
+}
+
+# What the running Hyprland has on a choice's chord, other than the launcher.
+# Asking Hyprland is exact: Omarchy binds some keys only when a program is
+# installed, which a search of the config files cannot tell.
+hotkey_holder() {
+  local mask key release
+  case $1 in
+    alt-space) mask=8 key=SPACE release=false ;;
+    super) mask=64 key=SUPER_L release=true ;;
+    super-space) mask=64 key=SPACE release=false ;;
+    *) return 0 ;;
+  esac
+  hyprctl binds -j 2>/dev/null | jq -r --argjson mask "$mask" --arg key "$key" --argjson release "$release" '
+    [.[] | select(.modmask == $mask and (.key | ascii_upcase) == $key and .release == $release)
+         | select((.description // "") != "noblerunner launcher")
+         | (.description // "" | if . == "" then "another bind" else . end)] | unique | join(", ")' 2>/dev/null
+}
+
+hotkey_lua() {
+  printf '%s (key: %s). Safe to edit; setup backs it up before replacing it.\n' "$HOTKEY_MARK" "$1"
+  case $1 in
+    alt-space) cat <<'LUA'
+-- Alt+Space reaches the plugin's global shortcut directly, so no process
+-- starts per keypress. Omarchy puts dictation on Alt+Space when a dictation
+-- program is installed; the unbind gives the key to the launcher.
+hl.unbind("ALT + SPACE")
+o.bind("ALT + SPACE", "noblerunner launcher", hl.dsp.global("noblerunner:toggle"))
+LUA
+      ;;
+    super) cat <<'LUA'
+-- A tap of left Super toggles the launcher. The chord is SUPER + SUPER_L:
+-- on release the Super modifier is still down, so a bare Super_L bind does
+-- not match. It fires on release, so holding Super for another shortcut
+-- does not open the launcher. This one runs the command: dispatching the
+-- global shortcut from inside this bind reports success and opens nothing.
+hl.unbind("SUPER + SUPER_L")
+o.bind("SUPER + SUPER_L", "noblerunner launcher", "'" .. os.getenv("HOME") .. "/.local/bin/noblerunner' toggle", { release = true })
+LUA
+      ;;
+    super-space) cat <<'LUA'
+-- Super+Space is the Omarchy menu's key. The unbind hands it to the
+-- launcher; the menu is still there in noblerunner as "Omarchy Menu".
+hl.unbind("SUPER + SPACE")
+o.bind("SUPER + SPACE", "noblerunner launcher", hl.dsp.global("noblerunner:toggle"))
+LUA
+      ;;
+  esac
+}
+
+# The choice an existing file holds: one of HOTKEY_KEYS, or "custom".
+hotkey_current() {
+  local file=$1 binds
+  [[ -f $file ]] || { echo off; return; }
+  binds=$(grep -vE '^\s*--' "$file" | grep -E '\bbind\(' || true)
+  if [[ $(grep -c . <<<"$binds") -ne 1 ]]; then echo custom
+  elif [[ $binds == *'"SUPER + SUPER_L"'* ]]; then echo super
+  elif [[ $binds == *'"SUPER + SPACE"'* ]]; then echo super-space
+  elif [[ $binds == *'"ALT + SPACE"'* ]]; then echo alt-space
+  else echo custom
+  fi
+}
+
+# True when the file is exactly what setup writes for one of the keys, so
+# replacing it loses nothing.
+hotkey_pristine() {
+  local key
+  for key in alt-space super super-space; do
+    [[ $(cat "$1") == "$(hotkey_lua "$key")" ]] && return 0
+  done
+  return 1
+}
+
+# Guided choice. Prints the chosen key (or "keep") on stdout; the menu goes
+# to stderr so the answer can be captured.
+hotkey_choose() {
+  local file=$1 current=$2 key holder i=0 default=1 answer keep=0
+  {
+    echo
+    echo "Which key should open noblerunner?"
+    echo
+    for key in "${HOTKEY_KEYS[@]}"; do
+      i=$((i + 1))
+      # Enter keeps the current key. With no hotkey file yet, it is Alt+Space.
+      [[ -f $file && $key == "$current" ]] && default=$i
+      printf '  %d) %-12s %s\n' "$i" "$(hotkey_label "$key")" "$(hotkey_note "$key")"
+      holder=$(hotkey_holder "$key")
+      [[ -n $holder ]] && printf '     %-12s now used by: %s (noblerunner would take it over)\n' "" "$holder"
+    done
+    if [[ $current == custom ]]; then
+      keep=5 default=5
+      printf '  5) %-12s leave your own %s as it is\n' "Keep" "$file"
+    fi
+    echo
+    if [[ $current != custom && -f $file ]]; then echo "Current: $(hotkey_label "$current")"; fi
+  } >&2
+  while true; do
+    read -r -p "Choose 1-$(( keep ? 5 : 4 )) [$default]: " answer || { echo >&2; answer=""; }
+    answer=${answer:-$default}
+    case $answer in
+      1|2|3|4) echo "${HOTKEY_KEYS[answer-1]}"; return 0 ;;
+      5) (( keep )) && { echo keep; return 0; } ;;
+    esac
+    echo "Type a number from the list." >&2
+  done
+}
+
 cmd_setup_hyprland() {
-  local assume_yes=0
-  [[ ${1:-} == --yes || ${1:-} == -y ]] && assume_yes=1
+  local assume_yes=0 key="" arg
+  for arg in "$@"; do
+    case $arg in
+      --yes|-y) assume_yes=1 ;;
+      --key=*) key=${arg#--key=} ;;
+      "") ;;
+      *) die "usage: noblerunner setup hyprland [--key=alt-space|super|super-space|off] [--yes]" ;;
+    esac
+  done
+  if [[ -n $key && ! " ${HOTKEY_KEYS[*]} " == *" $key "* ]]; then
+    die "unknown key '$key'; use one of: ${HOTKEY_KEYS[*]}"
+  fi
   local main="$hypr_dir/hyprland.lua" file="$hypr_dir/noblerunner.lua" legacy="$hypr_dir/$LEGACY_NAME.lua"
   [[ -f $main ]] || die "no $main; this setup targets Lua-configured Hyprland (hyprctl version: $(hyprctl version 2>/dev/null | head -1))"
 
-  local conflicts
-  conflicts=$(grep -rnE '"ALT \+ SPACE"|ALT, ?SPACE' "$hypr_dir" "${OMARCHY_PATH:-/usr/share/omarchy}/default/hypr" 2>/dev/null |
-    grep -vF -e "$file:" -e "$legacy:" | grep -vE '^\S+:[0-9]+:\s*(--|#)')
-  if [[ -n $conflicts ]]; then
-    echo "Alt+Space is already bound:" >&2
-    echo "$conflicts" >&2
-    die "unbind it first, or write $file yourself with another key"
-  fi
-
-  local legacy_require=0 needs_require=1 plan=()
-  grep -qE '^\s*require\("hypr\.omacast"\)' "$main" && legacy_require=1
-  grep -qE '^\s*require\("hypr\.noblerunner"\)' "$main" && needs_require=0
-  if [[ -f $file ]]; then
-    plan+=("keep your existing $file")
-  elif [[ -f $legacy ]]; then
-    plan+=("move $legacy to $file, renaming omacast:toggle to noblerunner:toggle")
-  else
-    plan+=("write $file, binding Alt+Space to noblerunner:toggle")
-  fi
-  if (( legacy_require )); then
-    plan+=("replace require(\"hypr.omacast\") with require(\"hypr.noblerunner\") in $main")
-  elif (( needs_require )); then
-    plan+=("append require(\"hypr.noblerunner\") to $main")
-  fi
-  plan+=("reload Hyprland")
-
-  echo "noblerunner setup hyprland will:"
-  printf '  - %s\n' "${plan[@]}"
-  confirm "Make these changes?" "$assume_yes" || die "nothing changed"
-
+  # The omacast file moves to the new name first, keeping the user's key.
   if [[ ! -f $file && -f $legacy ]]; then
     # cp -p keeps the old file's mode (it may be private); sed -i keeps it too.
     cp -p -- "$legacy" "$file" &&
       sed -i 's/omacast/noblerunner/g; s/rerunning setup overwrites it/rerunning setup keeps it/' "$file" &&
       rm -- "$legacy" && echo "moved $legacy to $file"
-  elif [[ ! -f $file ]]; then
-    cat >"$file" <<'LUA'
--- Written by `noblerunner setup hyprland`. Safe to edit; rerunning setup keeps it.
--- Alt+Space reaches the plugin's global shortcut directly, so no process
--- starts per keypress. Omarchy's own menu stays on Super+Space.
-o.bind("ALT + SPACE", "noblerunner launcher", hl.dsp.global("noblerunner:toggle"))
-LUA
-    echo "wrote $file"
+    [[ -n $key ]] || key=keep
   fi
 
-  if (( legacy_require )); then
-    sed -i -E 's/^(\s*)require\("hypr\.omacast"\)/\1require("hypr.noblerunner")/; s/^-- omacast launcher bindings$/-- noblerunner launcher bindings/' "$main"
-    echo "updated the require in $main"
-  elif (( needs_require )); then
-    printf '\nrequire("hypr.noblerunner")\n' >>"$main"
-    echo "added require(\"hypr.noblerunner\") to $main"
+  local current explicit=1 chosen=0
+  current=$(hotkey_current "$file")
+  if [[ -z $key ]]; then
+    if interactive && ! (( assume_yes )); then
+      key=$(hotkey_choose "$file" "$current") chosen=1
+    elif [[ -f $file ]]; then
+      key=keep
+    else
+      # Nobody picked a key, so nothing may be taken from another bind.
+      key=alt-space explicit=0
+    fi
   fi
-  hyprctl reload >/dev/null && echo "reloaded Hyprland; Alt+Space toggles noblerunner"
+
+  local holder=""
+  [[ $key == keep ]] || holder=$(hotkey_holder "$key")
+  if [[ -n $holder ]] && ! (( explicit )); then
+    die "Alt+Space is used by: $holder. Pick a key yourself with: noblerunner setup hyprland --key=alt-space|super|super-space|off"
+  fi
+
+  local legacy_require=0 has_require=0 plan=() content="" backup="" risky=0
+  grep -qE '^\s*require\("hypr\.omacast"\)' "$main" && legacy_require=1
+  grep -qE '^\s*require\("hypr\.noblerunner"\)' "$main" && has_require=1
+  if [[ $key != keep && $key != off ]]; then content=$(hotkey_lua "$key"); fi
+  local replace=0
+  if [[ $key != keep && -f $file && $(cat "$file") != "$content" ]]; then
+    replace=1
+    # A file setup wrote and nobody edited is replaced as it is. Anything
+    # else is someone's work: back it up and ask.
+    if ! hotkey_pristine "$file"; then
+      backup="$file.bak-$(date +%Y%m%d-%H%M%S)"
+      risky=1
+    fi
+  fi
+
+  case $key in
+    keep) plan+=("keep your existing $file") ;;
+    off)
+      if [[ -n $backup ]]; then plan+=("remove the hotkey: move your $file to $backup")
+      elif [[ -f $file ]]; then plan+=("remove the hotkey file $file")
+      else plan+=("leave the hotkey off (there is no $file)")
+      fi
+      (( has_require )) && plan+=("remove require(\"hypr.noblerunner\") from $main")
+      ;;
+    *)
+      if [[ -f $file ]] && ! (( replace )); then
+        plan+=("keep $file; it already binds $(hotkey_label "$key")")
+      else
+        [[ -n $backup ]] && plan+=("back up your current $file to $backup")
+        plan+=("write $file, binding $(hotkey_label "$key") to the launcher")
+      fi
+      if [[ -n $holder ]]; then plan+=("take $(hotkey_label "$key") from: $holder"); risky=1; fi
+      ;;
+  esac
+  if [[ $key != off ]]; then
+    if (( legacy_require )); then
+      plan+=("replace require(\"hypr.omacast\") with require(\"hypr.noblerunner\") in $main")
+    elif ! (( has_require )); then
+      plan+=("append require(\"hypr.noblerunner\") to $main")
+    fi
+  fi
+  plan+=("reload Hyprland")
+
+  echo "noblerunner setup hyprland will:"
+  printf '  - %s\n' "${plan[@]}"
+  # Someone who just picked from the menu has already said yes, unless the
+  # choice takes a key from something else or replaces a hand-written file.
+  if ! (( chosen )) || (( risky )); then
+    confirm "Make these changes?" "$assume_yes" || die "nothing changed"
+  fi
+
+  if [[ -n $backup ]]; then
+    cp -p -- "$file" "$backup" && echo "backed up $file to $backup"
+  fi
+  case $key in
+    keep) ;;
+    off)
+      if [[ -f $file ]]; then rm -- "$file" && echo "removed $file"; fi
+      if (( has_require )); then
+        sed -i -E '/^\s*require\("hypr\.noblerunner"\)\s*$/d; /^-- noblerunner launcher bindings$/d' "$main"
+        echo "removed the require from $main"
+      fi
+      ;;
+    *)
+      if [[ ! -f $file ]] || (( replace )); then
+        # Write in place: an existing file keeps its mode.
+        printf '%s\n' "$content" >"$file" && echo "wrote $file"
+      fi
+      [[ $key == super && ! -e $cli_link ]] && link_cli
+      ;;
+  esac
+
+  if [[ $key != off ]]; then
+    if (( legacy_require )); then
+      sed -i -E 's/^(\s*)require\("hypr\.omacast"\)/\1require("hypr.noblerunner")/; s/^-- omacast launcher bindings$/-- noblerunner launcher bindings/' "$main"
+      echo "updated the require in $main"
+    elif ! (( has_require )); then
+      printf '\nrequire("hypr.noblerunner")\n' >>"$main"
+      echo "added require(\"hypr.noblerunner\") to $main"
+    fi
+  fi
+  if hyprctl reload >/dev/null 2>&1; then
+    case $key in
+      keep) echo "reloaded Hyprland" ;;
+      off) echo "reloaded Hyprland; the hotkey is off. Open the launcher with: noblerunner toggle" ;;
+      *) echo "reloaded Hyprland; $(hotkey_label "$key") toggles noblerunner" ;;
+    esac
+  else
+    echo "could not reload Hyprland; run: hyprctl reload" >&2
+  fi
 }
 
 cmd_doctor() {
@@ -326,8 +532,8 @@ case "${1:-}" in
   dev) cmd_dev ;;
   setup)
     case "${2:-}" in
-      hyprland) cmd_setup_hyprland "${3:-}" ;;
-      *) die "usage: noblerunner setup hyprland [--yes]" ;;
+      hyprland) cmd_setup_hyprland "${@:3}" ;;
+      *) die "usage: noblerunner setup hyprland [--key=alt-space|super|super-space|off] [--yes]" ;;
     esac
     ;;
   doctor) cmd_doctor ;;

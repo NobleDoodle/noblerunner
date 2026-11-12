@@ -10,12 +10,14 @@ REMOVE_PLUGIN=0
 REMOVE_HOTKEY=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --remove-plugin) REMOVE_PLUGIN=1 ;;
+    # The hotkey file unbinds the key it took (Alt+Space dictation, the Super+Space
+    # menu). Left behind without the plugin, that key would do nothing.
+    --remove-plugin) REMOVE_PLUGIN=1; REMOVE_HOTKEY=1 ;;
     --hotkey) REMOVE_HOTKEY=1 ;;
     -h|--help)
       echo "Usage: uninstall.sh [--hotkey] [--remove-plugin]"
       echo "  --hotkey         Delete ~/.config/hypr/noblerunner.lua and its require line"
-      echo "  --remove-plugin  Run: omarchy plugin remove $PLUGIN_ID"
+      echo "  --remove-plugin  Remove the hotkey too, then run: omarchy plugin remove $PLUGIN_ID"
       exit 0
       ;;
     *) echo "unknown option: $1" >&2; exit 1 ;;
@@ -40,7 +42,7 @@ if [[ "$REMOVE_HOTKEY" -eq 1 ]]; then
   fi
   info "Removed the noblerunner hotkey"
 else
-  info "Left ~/.config/hypr/noblerunner.lua in place. Remove it with: uninstall.sh --hotkey"
+  info "Left the hotkey in place. Remove it with: uninstall.sh --hotkey"
 fi
 
 if [[ "$REMOVE_PLUGIN" -eq 1 ]]; then
