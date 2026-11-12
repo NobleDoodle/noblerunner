@@ -30,8 +30,6 @@ Omarchy's built-in menu is great at what it does. noblerunner adds what Raycast 
 
 ## Screenshots
 
-Every shot is the launcher itself, cut at its own border.
-
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/search.png" alt="Searching 'screen' shows Omarchy actions with breadcrumbs"></td>
