@@ -4,14 +4,14 @@
 
 <div align="center">
 
-![noblerunner](preview-exact.png)
+![noblerunner](preview.png)
 
 # noblerunner
 
 **A Raycast-esque launcher for [Omarchy](https://omarchy.org).**
 It learns what you use, searches your apps and every Omarchy action, and looks like it shipped with your theme.
 
-<img src="docs/screenshots/superwhisper-exact.png" alt="Superwhisper's glow along the bottom edge of the search bar" width="657">
+<img src="docs/screenshots/superwhisper.png" alt="Superwhisper's glow along the bottom edge of the search bar" width="656">
 
 </div>
 
@@ -25,10 +25,12 @@ Omarchy's built-in menu is great at what it does. noblerunner adds what Raycast 
 * **One search for everything.** Your apps, all ~400 Omarchy menu actions (with breadcrumbs and live ✓ state), and web-search fallbacks.
 * **Your shortcuts.** Give anything an alias, pin favorites, and hide the commands you never touch.
 * **Keyboard-first.** A Ctrl+K action panel, Ctrl+1–9 quick picks, search history on ↑, section jumping, and emacs-style navigation.
-* **Superwhisper.** Dictate into the open bar. The words land in the search field, and Superwhisper's own glow sits along the bottom edge of the card.
+* **Superwhisper.** Dictate into the open bar. The words land in the search field, and Superwhisper's own glow sits along the bottom edge of the card. This is only active when Superwhisper is installed.
 * **Native to Omarchy.** It runs inside `omarchy-shell` as a plugin, with no Electron, no Node and no extra daemons. It opens in about 40 ms and follows your theme live when you run `omarchy theme set`.
 
 ## Screenshots
+
+Every shot is the launcher itself, cut at its own border.
 
 <table>
   <tr>
@@ -39,21 +41,19 @@ Omarchy's built-in menu is great at what it does. noblerunner adds what Raycast 
     <td align="center"><b>Every Omarchy action, with breadcrumbs</b></td>
     <td align="center"><b>Ctrl+K: actions for any result</b></td>
   </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/hero.png" alt="noblerunner showing the empty catalog"></td>
+    <td width="50%"><img src="docs/screenshots/fallbacks.png" alt="An unmatched search offers the default web search"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Opens on your apps and Omarchy actions</b></td>
+    <td align="center"><b>No match? Send the query to your default web search</b></td>
+  </tr>
 </table>
-
-<p align="center">
-  <img src="docs/screenshots/fallbacks.png" alt="An unmatched search offers the default web search" width="49%">
-</p>
-<p align="center"><b>No match? Send the query to your default web search</b></p>
-
-<p align="center">
-  <img src="docs/screenshots/hero.png" alt="noblerunner showing the empty catalog" width="49%">
-</p>
-<p align="center"><b>Opens on your apps and Omarchy actions</b></p>
 
 ### Follows your Omarchy theme
 
-There's no theme config. noblerunner binds to Omarchy's own colours, so it changes the moment you switch themes.
+There's no theme config. noblerunner binds to Omarchy's own colors and to your Hyprland window border, so it changes the moment you switch themes.
 
 <img src="docs/screenshots/themes.png" alt="noblerunner in Tokyo Night, Gruvbox, Rose Pine, Flexoki Light, Everforest and Nord">
 
@@ -68,21 +68,54 @@ omarchy plugin add https://github.com/NobleDoodle/noblerunner --enable
 
 The first command is the normal Omarchy plugin install. The second checks that
 `omarchy-shell`, `socat`, `jq` and `hyprctl` are present, links the `noblerunner`
-command into `~/.local/bin`, and builds the optional search helper when Rust
-is installed. It does not install packages. A missing required command stops
-the script and names the package. Missing Rust is a warning: search still
-works with the built-in matcher.
+command into `~/.local/bin`, builds the optional search helper when Rust
+is installed, and then asks which key should open the launcher. It does not
+install packages. A missing required command stops the script and names the
+package. Missing Rust is a warning: search still works with the built-in matcher.
 
-Bind a hotkey in the same script with `--hotkey`. That writes
-`~/.config/hypr/noblerunner.lua` for Alt+Space and adds one
-`require("hypr.noblerunner")` line to `~/.config/hypr/hyprland.lua`. If
-Alt+Space is already used, the hotkey step is skipped and the rest of the
-install still finishes. An existing `noblerunner.lua` is kept. To choose
-another key, edit that file. Super+Space stays the Omarchy menu.
+### Choosing the hotkey
+
+Run in a terminal, `install.sh` ends with this question:
+
+```text
+Which key should open noblerunner?
+
+  1) Alt+Space    the usual launcher key
+                  now used by: Toggle dictation (noblerunner would take it over)
+  2) Super        tap the Super key by itself; holding it for another shortcut does nothing
+  3) Super+Space  takes the Omarchy menu's key; the menu stays in noblerunner as "Omarchy Menu"
+                  now used by: Omarchy menu (noblerunner would take it over)
+  4) Off          no hotkey; open it with: noblerunner toggle
+
+Choose 1-4 [1]:
+```
+
+1. Type a number and press Enter. Enter by itself takes the choice in brackets:
+   Alt+Space on a new install, your current key after that.
+2. A `now used by` line appears under a key that already does something on your
+   machine. Omarchy puts dictation on Alt+Space when a dictation program is
+   installed, and its menu on Super+Space.
+3. The script lists what it will change. If your choice takes a key from
+   something else, or replaces a `noblerunner.lua` you wrote yourself, it asks
+   once more before changing anything. A file of your own is first copied to
+   `noblerunner.lua.bak-<date>` next to it.
+4. Hyprland reloads and the key works at once.
+
+The hotkey is one file, `~/.config/hypr/noblerunner.lua`, plus one
+`require("hypr.noblerunner")` line at the end of `~/.config/hypr/hyprland.lua`.
+Omarchy's own files are never edited. The file unbinds the key it takes and
+then binds the launcher, so removing the file gives the key back.
+
+Change the key later by asking again, or set it without questions:
 
 ```bash
-~/.config/omarchy/plugins/nobledoodle.noblerunner/install.sh --hotkey
+noblerunner setup hyprland                      # the same question
+noblerunner setup hyprland --key=super --yes    # alt-space | super | super-space | off
 ```
+
+`install.sh --hotkey=super` (or `alt-space`, `super-space`, `off`) answers the
+question up front, and `install.sh --no-hotkey` skips it. Run without a
+terminal, the script does not ask and leaves the hotkey alone.
 
 noblerunner stays loaded in the shell, so if the launcher does not appear
 after the first install, restart the shell once with `omarchy-restart-shell`.
@@ -97,8 +130,11 @@ files.
 ~/.config/omarchy/plugins/nobledoodle.noblerunner/uninstall.sh --remove-plugin
 ```
 
-Add `--hotkey` to also delete `~/.config/hypr/noblerunner.lua` and its
-`require` line. Your settings and history stay in `~/.config/noblerunner`,
+This also deletes `~/.config/hypr/noblerunner.lua` and its `require` line, so
+a key the launcher took goes back to what it did before. If you remove the
+plugin with `omarchy plugin remove` instead, run
+`noblerunner setup hyprland --key=off --yes` first, or delete that file and
+line yourself. Your settings and history stay in `~/.config/noblerunner`,
 `~/.local/share/noblerunner`, `~/.cache/noblerunner` and
 `~/.local/state/noblerunner` until you delete them.
 
@@ -120,6 +156,11 @@ background services.
   or times out, search falls back to the built-in matcher until the plugin reloads. Rebuild it after
   `omarchy plugin update`.
 
+- **Superwhisper glow.** When Superwhisper is installed, the launcher opens an invisible window behind its
+  card while it is open, because Superwhisper draws its glow on the focused window. noblerunner adds a
+  Hyprland rule for that one window so it has no border or blur. Turn it off with `"superwhisperGlow": false`
+  in `~/.config/noblerunner/config.json`. Without Superwhisper none of this happens.
+
 ### Privacy
 
 Your search history, learned search terms and calculator history stay on your machine, in owner-only
@@ -127,6 +168,8 @@ files: noblerunner creates its `~/.config`, `~/.local/share`, `~/.cache` and `~/
 `0700` and its database files as `0600`, and tightens any it finds readable by other users. Text you copy
 or paste from the calculator goes to `wl-copy` on stdin, never on a command line, so other local users
 can't read it from the process list. Paste sends Shift+Insert after copying, as Omarchy's clipboard history does.
+A web search is the exception: the search address, with your query in it, is handed to your browser as a
+command-line argument, which is how a browser is given a page to open.
 
 ### Upgrading from omacast
 
@@ -135,6 +178,45 @@ cache and state directories to the `noblerunner` names. In a development checkou
 the old plugin link and `~/.local/bin/omacast`, and `noblerunner setup hyprland` moves `omacast.lua` to
 `noblerunner.lua`, keeping your key. `noblerunner doctor` reports anything left over.
 
+## Settings
+
+Settings live inside the launcher. There is no separate window.
+
+<p align="center">
+  <img src="docs/screenshots/settings.png" alt="The /settings panel with its seven rows" width="525">
+</p>
+
+1. Open noblerunner and type `/settings`. `/s` is enough.
+2. Move between rows with `↑` and `↓` (or your navigation keys).
+3. Change the selected row with `→` or `↵`. `←` goes the other way. A click on a row also steps it forward.
+4. Each change applies and saves as you make it. There is nothing to confirm.
+5. Clear the search field or press `Esc` to go back to searching.
+
+| Row | Values | What it does |
+|---|---|---|
+| Window | Expanded, Compact | Expanded opens with the full list. Compact opens as the search bar alone and grows when you type. |
+| Escape | Back out, then close · Close and return to root | The first clears the query, then steps back a level, then closes. The second closes at once. `Shift+Esc` returns to the root without closing. |
+| Navigation | Emacs, Vim | Emacs moves down with `Ctrl+N` (`Ctrl+P` moves up inside panels and opens the filter in the list). Vim moves with `Ctrl+J` / `Ctrl+K` and puts the action panel on `Alt+K`. |
+| Search sensitivity | Low, Medium, High | How close a result must be to what you typed. Low shows every loose match, High only the strong ones. |
+| Web search | Google, DuckDuckGo, Brave, Bing, Startpage, Ecosia | The search engine offered when nothing matches. |
+| Zoom | 80% to 150% | Size of the launcher, in steps of 10%. `Ctrl +`, `Ctrl −` and `Ctrl 0` change it from anywhere. |
+| Animations | Off, 0.5×, 1×, 1.5×, 2× | Speed of the open, close and expand motion. 2× is twice as fast. |
+
+Settings are stored in `~/.local/share/noblerunner/db/settings.json`. The same values can be set from a
+terminal, for example `noblerunner call settings.updateGeneralSettings '{"webSearch":"duckduckgo"}'`.
+
+A few options that rarely change are in `~/.config/noblerunner/config.json` (create it if it is missing):
+
+| Key | Default | What it does |
+|---|---|---|
+| `currencyRates` | `true` | Download ECB exchange rates for the calculator. |
+| `superwhisperGlow` | `true` | Show Superwhisper's glow on the card when Superwhisper is installed. |
+| `keepVisibleOnFocusLoss` | `false` | Keep the launcher open when you click outside it. |
+| `clockFormat` | `"auto"` | `"12h"` or `"24h"` for times in calculator answers. |
+| `remToPxRate` | `16` | Pixels per rem in unit conversions. |
+| `workHoursPerDay` | `8` | Hours in a work day for work-time conversions. |
+| `logLevel` | `"info"` | How much noblerunner writes to the shell log. |
+
 ## Keyboard
 
 | Key | Does |
@@ -142,6 +224,7 @@ the old plugin link and `~/.local/bin/omacast`, and `noblerunner setup hyprland`
 | `↵` / `Ctrl+↵` / `Ctrl+Shift+↵` | Run the first, second or third action |
 | `Shift+↵` | Open a new window of an app (`↵` switches to the one already open) |
 | `Ctrl+K` | Open the action panel |
+| `/settings` | Open the settings panel |
 | `Super+V` / `Ctrl+V` / `Ctrl+Shift+V` / `Shift+Insert` | Paste text into the query (also accepts clipboard-history selections) |
 | `Ctrl+1`…`9` | Pick a result |
 | `↑` on an empty search | Search history |
@@ -164,11 +247,10 @@ noblerunner doctor
 
 ## Roadmap
 
-noblerunner is early. Search, ranking and the Omarchy integration are done. Coming next:
+noblerunner is early. Search, ranking, the calculator, in-launcher settings and the Omarchy integration are done. Coming next:
 
-- [ ] Settings window
 - [ ] Script Commands
-- [ ] Clipboard history, snippets, quicklinks, calculator
+- [ ] Clipboard history, snippets, quicklinks
 - [ ] Running Raycast extensions built from the open-source [`raycast/extensions`](https://github.com/raycast/extensions) repo
 - [ ] Window management
 - [ ] Importing your `.rayconfig` from macOS
@@ -178,8 +260,8 @@ The full plan is in [`SPEC.md`](SPEC.md).
 ## Development
 
 ```sh
-git clone https://github.com/typecraft-dev/oma-cast.git
-cd omacast
+git clone https://github.com/NobleDoodle/noblerunner.git
+cd noblerunner
 bin/noblerunner install         # symlink this checkout into omarchy-shell instead of a marketplace copy
 node --test tests/*.test.js # unit tests, no npm install needed
 tests/smoke.sh              # live checks against the running shell
@@ -191,4 +273,4 @@ Quickshell caches QML for the life of the process, so run `noblerunner reload` a
 
 ## Notes
 
-noblerunner is an independent, clean-room project. It isn't affiliated with or endorsed by Raycast, and it contains no Raycast code or assets. It never contacts Raycast's servers and has no telemetry. Its agent action explicitly hands your question to Omarchy's existing coding-agent launcher; it provides no embedded AI runtime.
+noblerunner is an independent, clean-room project. It isn't affiliated with or endorsed by Raycast, and it contains no Raycast code or assets. It never contacts Raycast's servers and has no telemetry. It has no embedded AI features.
