@@ -4,7 +4,7 @@ const fs = require("node:fs")
 const path = require("node:path")
 const { spawnSync } = require("node:child_process")
 
-// ui/WheelScroll.qml under qmltestrunner, offscreen. Skipped where Qt's test
+// ui/RunnerWheelScroll.qml under qmltestrunner, offscreen. Skipped where Qt's test
 // runner is not installed (CI has no Qt).
 const runner = "/usr/lib/qt6/bin/qmltestrunner"
 

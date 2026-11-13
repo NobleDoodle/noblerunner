@@ -1,5 +1,10 @@
 import QtQuick
 
+// Wheel and touchpad scrolling for a list. Named for this plugin on purpose:
+// a QML file in the plugin's own folder loses to a same-named type in an
+// imported module such as qs.Ui, so a generic name could be taken over by
+// the shell.
+//
 // Wheel and touchpad scrolling for a list. Flickable's own wheel handling
 // turns each event into a short flick that moves a few pixels.
 //

@@ -16,11 +16,11 @@ Item {
       width: 300; height: 20
       MouseArea { anchors.fill: parent; hoverEnabled: true; onClicked: {} }
     }
-    WheelScroll { id: handler; view: list; lineHeight: 20 }
+    RunnerWheelScroll { id: handler; view: list; lineHeight: 20 }
   }
 
   TestCase {
-    name: "WheelScroll"
+    name: "RunnerWheelScroll"
     when: windowShown
 
     function init() { handler.stopCoasting(); handler.samples = []; handler.endsReported = false; list.contentY = list.originY }

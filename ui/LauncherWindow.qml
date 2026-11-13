@@ -253,7 +253,7 @@ PanelWindow {
     borderColorProc.running = true
   }
 
-  // Hyprland's touchpad scroll factor, divided back out (see WheelScroll.qml).
+  // Hyprland's touchpad scroll factor, divided back out (see RunnerWheelScroll.qml).
   property real touchpadScrollFactor: 1
   readonly property real scrollSpeed: window.backend.config.scrollSpeed > 0 ? window.backend.config.scrollSpeed : 1
   // Gain 3 over the unscaled touchpad: tuned on Omarchy's ELAN touchpad to
@@ -1372,7 +1372,7 @@ PanelWindow {
         model: rows
         reuseItems: true
         boundsBehavior: Flickable.StopAtBounds
-        WheelScroll { view: list; lineHeight: window.px(42); touchpadScale: window.touchpadScrollScale; wheelScale: window.scrollSpeed }
+        RunnerWheelScroll { view: list; lineHeight: window.px(42); touchpadScale: window.touchpadScrollScale; wheelScale: window.scrollSpeed }
 
         delegate: ResultRow {
           Component.onCompleted: selected = index === window.selectedIndex
