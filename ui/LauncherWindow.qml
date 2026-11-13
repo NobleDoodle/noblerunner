@@ -248,10 +248,29 @@ PanelWindow {
     }
   }
   function refreshWindowBorder() {
+    scrollFactorProc.running = true
     borderSizeProc.running = true
     borderColorProc.running = true
   }
 
+  // Hyprland's touchpad scroll factor, divided back out so the list follows
+  // the fingers (see WheelScroll.qml).
+  property real touchpadScrollFactor: 1
+  readonly property real scrollSpeed: window.backend.config.scrollSpeed > 0 ? window.backend.config.scrollSpeed : 1
+  readonly property real touchpadScrollScale: window.scrollSpeed / Math.max(0.05, window.touchpadScrollFactor)
+  Process {
+    id: scrollFactorProc
+    command: ["hyprctl", "-j", "getoption", "input:touchpad:scroll_factor"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        try {
+          var f = Number(JSON.parse(text || "{}").float)
+          if (isFinite(f) && f > 0) window.touchpadScrollFactor = f
+        } catch (e) {}
+      }
+    }
+  }
   Process {
     id: borderSizeProc
     command: ["hyprctl", "-j", "getoption", "general:border_size"]
@@ -1352,7 +1371,7 @@ PanelWindow {
         model: rows
         reuseItems: true
         boundsBehavior: Flickable.StopAtBounds
-        WheelScroll { view: list; lineHeight: window.px(42) }
+        WheelScroll { view: list; lineHeight: window.px(42); touchpadScale: window.touchpadScrollScale; wheelScale: window.scrollSpeed }
 
         delegate: ResultRow {
           Component.onCompleted: selected = index === window.selectedIndex
@@ -1468,6 +1487,8 @@ PanelWindow {
         actions: window.actions
         look: window.look
         zoom: window.zoom
+        touchpadScrollScale: window.touchpadScrollScale
+        scrollSpeed: window.scrollSpeed
         onActivated: function(actionId) { window.perform(actionId) }
       }
     }

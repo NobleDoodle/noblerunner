@@ -11,6 +11,8 @@ Rectangle {
   property int selectedIndex: 0
   property var look: null
   property real zoom: 1
+  property real touchpadScrollScale: 1
+  property real scrollSpeed: 1
 
   signal activated(string actionId)
 
@@ -55,7 +57,7 @@ Rectangle {
     clip: true
     model: panel.visibleActions
     boundsBehavior: Flickable.StopAtBounds
-    WheelScroll { view: list; lineHeight: panel.px(34) }
+    WheelScroll { view: list; lineHeight: panel.px(34); touchpadScale: panel.touchpadScrollScale; wheelScale: panel.scrollSpeed }
 
     delegate: Item {
       required property var modelData
