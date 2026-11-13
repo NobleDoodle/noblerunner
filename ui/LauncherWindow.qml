@@ -418,6 +418,11 @@ PanelWindow {
   }
 
   function prepare(payload) {
+    // The shell indexes icon files once, at start. An icon theme rebuilt
+    // since then (Omarchroma writes a new hashed folder) leaves stale paths
+    // and blank icons. Omarchy's menu and app grid rescan on every open; the
+    // scan runs in the background and the rows pick up the new paths.
+    if (window.appLibrary) window.appLibrary.refreshIcons()
     if (typeof payload.query === "string") window.query = payload.query
     window.closePopups()
     window.historyIndex = -1
