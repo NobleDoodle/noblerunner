@@ -213,7 +213,7 @@ A few options that rarely change are in `~/.config/noblerunner/config.json` (cre
 | `currencyRates` | `true` | Download ECB exchange rates for the calculator. |
 | `superwhisperGlow` | `true` | Show Superwhisper's glow on the card when Superwhisper is installed. |
 | `keepVisibleOnFocusLoss` | `false` | Keep the launcher open when you click outside it. |
-| `scrollSpeed` | `1` | Scroll speed of the lists. At 1 the list follows your fingers on a touchpad and moves three rows per wheel notch; 2 is twice as fast. |
+| `scrollSpeed` | `1` | Scroll speed of the lists, on the touchpad and the mouse wheel (three rows per notch at 1). 2 is twice as fast. A quick touchpad swipe keeps coasting after you lift your fingers. |
 | `clockFormat` | `"auto"` | `"12h"` or `"24h"` for times in calculator answers. |
 | `remToPxRate` | `16` | Pixels per rem in unit conversions. |
 | `workHoursPerDay` | `8` | Hours in a work day for work-time conversions. |

@@ -253,11 +253,12 @@ PanelWindow {
     borderColorProc.running = true
   }
 
-  // Hyprland's touchpad scroll factor, divided back out so the list follows
-  // the fingers (see WheelScroll.qml).
+  // Hyprland's touchpad scroll factor, divided back out (see WheelScroll.qml).
   property real touchpadScrollFactor: 1
   readonly property real scrollSpeed: window.backend.config.scrollSpeed > 0 ? window.backend.config.scrollSpeed : 1
-  readonly property real touchpadScrollScale: window.scrollSpeed / Math.max(0.05, window.touchpadScrollFactor)
+  // Gain 3 over the unscaled touchpad: tuned on Omarchy's ELAN touchpad to
+  // about 45 rows for one slow full-height swipe. [D]
+  readonly property real touchpadScrollScale: 3 * window.scrollSpeed / Math.max(0.05, window.touchpadScrollFactor)
   Process {
     id: scrollFactorProc
     command: ["hyprctl", "-j", "getoption", "input:touchpad:scroll_factor"]

@@ -90,8 +90,8 @@ var configDefaults = {
   // Superwhisper's glow on the card. It needs a focused toplevel behind the
   // launcher, so it is only used when Superwhisper is installed. [D]
   superwhisperGlow: true,
-  // Multiplies list scrolling on top of following the fingers (touchpad)
-  // or three rows per wheel notch. [D]
+  // Multiplies list scrolling: touchpad tracking and three rows per wheel
+  // notch. [D]
   scrollSpeed: 1,
   // Calculator preferences named after Raycast's (ref 04 App. B) [O].
   remToPxRate: 16,
