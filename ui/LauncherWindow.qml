@@ -175,6 +175,21 @@ PanelWindow {
     window.anchorUp = true
     anchorPoll.tries = 0
     anchorPoll.restart()
+    // The card waits for this window, so look at once rather than a tick later.
+    Qt.callLater(window.anchorTick)
+  }
+  function anchorTick() {
+    if (!window.shown || !window.anchorUp) { anchorPoll.stop(); return }
+    anchorPoll.tries++
+    var top = window.findAnchor()
+    if (top && !window.layerUp) {
+      window.focusAnchor(top)
+      window.layerUp = true
+    } else if (!window.layerUp && anchorPoll.tries > 45) {
+      // About 750ms with no window: open without the glow.
+      window.layerUp = true
+    }
+    window.placeAnchor()
   }
   function dropAnchor() {
     anchorPoll.stop()
@@ -437,12 +452,20 @@ PanelWindow {
     window.alert = null
   }
 
+  // The shell indexes icon files once, at start. An icon theme rebuilt
+  // since then (Omarchroma writes a new hashed folder) leaves stale paths,
+  // so a row whose icon fails to load asks for a rescan. Not on every open:
+  // the scan walks every icon file (about 17,000, 130-300ms of CPU) and the
+  // index swap reloads every visible icon, which made the open stutter.
+  property double lastIconRescan: 0
+  function iconFailed() {
+    var now = Date.now()
+    if (!window.appLibrary || now - window.lastIconRescan < 10000) return
+    window.lastIconRescan = now
+    window.appLibrary.refreshIcons()
+  }
+
   function prepare(payload) {
-    // The shell indexes icon files once, at start. An icon theme rebuilt
-    // since then (Omarchroma writes a new hashed folder) leaves stale paths
-    // and blank icons. Omarchy's menu and app grid rescan on every open; the
-    // scan runs in the background and the rows pick up the new paths.
-    if (window.appLibrary) window.appLibrary.refreshIcons()
     if (typeof payload.query === "string") window.query = payload.query
     window.closePopups()
     window.historyIndex = -1
@@ -534,21 +557,12 @@ PanelWindow {
 
   Timer {
     id: anchorPoll
-    interval: 50
+    // Every frame while the card waits for the window, then at a calmer
+    // pace for keeping it placed.
+    interval: window.layerUp ? 50 : 16
     repeat: true
     property int tries: 0
-    onTriggered: {
-      if (!window.shown || !window.anchorUp) { stop(); return }
-      tries++
-      var top = window.findAnchor()
-      if (top && !window.layerUp) {
-        window.focusAnchor(top)
-        window.layerUp = true
-      } else if (!window.layerUp && tries > 15) {
-        window.layerUp = true
-      }
-      window.placeAnchor()
-    }
+    onTriggered: window.anchorTick()
   }
 
   Process {
@@ -1383,6 +1397,7 @@ PanelWindow {
           zoom: window.zoom
           onHovered: function(i, item, mouse) { if (!window.actionPanelOpen && pointerGate.moved(item, mouse)) window.select(i) }
           onClicked: function(i) { window.perform("open", i) }
+          onIconFailed: window.iconFailed()
         }
       }
 

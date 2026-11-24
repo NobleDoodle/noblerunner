@@ -31,6 +31,7 @@ Item {
 
   signal hovered(int index, var item, var mouse)
   signal clicked(int index)
+  signal iconFailed()
 
   readonly property bool isSection: row.rowKind === "section"
   readonly property bool isCalculator: row.rowKind === "calculator"
@@ -165,6 +166,7 @@ Item {
         sourceSize.width: width * Screen.devicePixelRatio
         sourceSize.height: height * Screen.devicePixelRatio
         source: !visible ? "" : (row.appLibrary ? row.appLibrary.iconSource(row.iconName) : Quickshell.iconPath(row.iconName, "application-x-executable"))
+        onStatusChanged: if (status === Image.Error) row.iconFailed()
       }
 
       Text {
